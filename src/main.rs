@@ -23,6 +23,7 @@ async fn main() {
             let mut line = String::new();
 
             loop {
+                //Handle IO 
                 tokio::select! {
                     result = reader.read_line(&mut line) => {
                         if result.unwrap() == 0 {
@@ -35,14 +36,14 @@ async fn main() {
                     result = rx.recv() => {
                         // Write back to client
                         let (msg, other_adder) = result.unwrap();
+                        let message = msg.clone();
 
                         if addr != other_adder{
-                            writer.write_all(msg.as_bytes()).await.unwrap();
+                            writer.write_all(message.as_bytes()).await.unwrap();
                         }
                     }
                 }
             }
         });
     }
-
 }
