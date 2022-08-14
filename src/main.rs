@@ -3,10 +3,17 @@ use tokio::{
     net::TcpListener, sync::broadcast,
 };
 
+#[derive(Debug, Clone)]
+struct Client {
+    name: String,
+    addr: std::net::SocketAddr
+}
+
 #[tokio::main]
 async fn main() {
     let listener = TcpListener::bind("localhost:8080").await.unwrap();
 
+    //channel for broadcasting messages
     let (tx, _rx) = broadcast::channel(10);
 
     loop {
@@ -22,24 +29,36 @@ async fn main() {
             let mut reader = BufReader::new(read);
             let mut line = String::new();
 
+            writer.write_all("Welcome to the chat server!\n".as_bytes()).await.unwrap();
+            writer.write_all("What is your name?\n".as_bytes()).await.unwrap();
+
+            reader.read_line(&mut line).await.unwrap();
+            let name = line.trim().to_string();
+            line.clear();
+
+            let client = Client { name, addr };
+
+            //Chat mechanism
             loop {
                 //Handle IO 
                 tokio::select! {
+                    // Read from client
                     result = reader.read_line(&mut line) => {
                         if result.unwrap() == 0 {
                             break;
                         }
 
-                        tx.send((line.clone(), addr)).unwrap();
+                        tx.send((line.clone(), addr, client.clone())).unwrap();
                         line.clear();
                     }
+
+                    // Write back to client
                     result = rx.recv() => {
-                        // Write back to client
-                        let (msg, other_adder) = result.unwrap();
-                        let message = msg.clone();
+                        let (msg, other_adder, client) = result.unwrap();
+                        let full_message = client.name + ": " + &msg;
 
                         if addr != other_adder{
-                            writer.write_all(message.as_bytes()).await.unwrap();
+                            writer.write_all(full_message.as_bytes()).await.unwrap();
                         }
                     }
                 }
