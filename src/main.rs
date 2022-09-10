@@ -17,6 +17,7 @@ async fn main() {
     let (tx, _rx) = broadcast::channel(10);
 
     loop {
+        //This is a blocking call that waits for a new connection to be established
         let (mut socket, addr) = listener.accept().await.unwrap();
 
         let tx = tx.clone();
